@@ -40,6 +40,11 @@ abstract class CMB_Field {
 
 		$this->value = reset( $this->values );
 
+		if ( $this->should_validate_values() ) {
+			add_action( 'post_edit_form_tag', function () {
+				echo ' data-parsley-validate ';
+			} );
+		}
 	}
 
 	/**
@@ -67,6 +72,7 @@ abstract class CMB_Field {
 				'save_callback'       => null,
 				'string-repeat-field' => __( 'Add New', 'cmb' ),
 				'string-delete-field' => __( 'Remove', 'cmb' ),
+				'validation'          => array(),
 			),
 			get_class( $this )
 		);
@@ -82,6 +88,9 @@ abstract class CMB_Field {
 		if ( isset( $this->args['sortable'] ) && $this->args['sortable'] )
 			wp_enqueue_script( 'jquery-ui-sortable' );
 
+		if ( $this->should_validate_values() ) {
+			wp_enqueue_script( 'parsley-js', trailingslashit( CMB_URL ) . 'js/vendor/parsley/dist/parsley.js', array( 'jquery' ), '2.4.4', true );
+		}
 	}
 
 	/**
@@ -210,6 +219,47 @@ abstract class CMB_Field {
 		foreach ( $attrs as $attr )
 			echo esc_html( $attr ) . '="' . esc_attr( $attr ) . '"';
 
+	}
+
+	/**
+	 * Check for validation array key in CMB Field.
+	 *
+	 * @return boolean
+	 */
+	public function should_validate_values() {
+		return ( ! empty( $this->args['validation'] ) );
+	}
+
+	/**
+	 * Return escaped parsley attributes
+	 * supports: required, required => minlength, required => maxlength
+	 *
+	 * @param array $attrs
+	 *
+	 * @todo Support all Parsley default validation types.
+	 */
+	public function validation_attr( $attrs = array() ) {
+
+		if ( ! $this->should_validate_values() ) {
+			return;
+		}
+
+		$validation_rules = wp_parse_args( $attrs, $this->args['validation'] );
+
+		// Validation rule: Required.
+		if ( isset( $validation_rules['required'] ) ) {
+
+			echo esc_attr( ' required ' );
+
+			if ( is_array( $validation_rules['required'] ) ) {
+
+				array_filter( array_unique( $validation_rules ) );
+
+				foreach ( $validation_rules['required'] as $name => $value ) {
+					echo 'data-parsley-' . esc_attr( $name ) . '="' . esc_attr( $value ) . '"';
+				}
+			}
+		}
 	}
 
 	/**
@@ -395,7 +445,7 @@ class CMB_Text_Field extends CMB_Field {
 
 	public function html() { ?>
 
-		<input type="text" <?php $this->id_attr(); ?> <?php $this->boolean_attr(); ?> <?php $this->class_attr(); ?> <?php $this->name_attr(); ?> value="<?php echo esc_attr( $this->get_value() ); ?>" />
+		<input type="text" <?php $this->id_attr(); ?> <?php $this->boolean_attr(); ?> <?php $this->class_attr(); ?> <?php $this->validation_attr(); ?> <?php $this->name_attr(); ?> value="<?php echo esc_attr( $this->get_value() ); ?>" />
 
 	<?php }
 }
