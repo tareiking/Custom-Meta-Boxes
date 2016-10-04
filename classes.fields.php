@@ -10,6 +10,7 @@ abstract class CMB_Field {
 
 	public $value;
 	public $field_index = 0;
+	public $validation_rules;
 
 	public function __construct( $name, $title, array $values, $args = array() ) {
 
@@ -40,10 +41,9 @@ abstract class CMB_Field {
 
 		$this->value = reset( $this->values );
 
-		if ( $this->should_validate_values() ) {
-			add_action( 'post_edit_form_tag', function () {
-				echo ' data-parsley-validate ';
-			} );
+		// If the field has validation.
+		if ( $this->requires_validation() ) {
+			$this->setup_validation();
 		}
 	}
 
@@ -88,7 +88,7 @@ abstract class CMB_Field {
 		if ( isset( $this->args['sortable'] ) && $this->args['sortable'] )
 			wp_enqueue_script( 'jquery-ui-sortable' );
 
-		if ( $this->should_validate_values() ) {
+		if ( $this->requires_validation() ) {
 			wp_enqueue_script( 'parsley-js', trailingslashit( CMB_URL ) . 'js/vendor/parsley/dist/parsley.js', array( 'jquery' ), '2.4.4', true );
 		}
 	}
@@ -222,44 +222,60 @@ abstract class CMB_Field {
 	}
 
 	/**
+	 * Used for validation setup tasks
+	 */
+	function setup_validation() {
+		$this->validation_rules = $this->args['validation'];
+
+		add_action( 'post_edit_form_tag', function () {
+			echo esc_attr( ' data-parsley-validate ' );
+		});
+	}
+
+	/**
 	 * Check for validation array key in CMB Field.
 	 *
 	 * @return boolean
 	 */
-	public function should_validate_values() {
+	public function requires_validation() {
 		return ( ! empty( $this->args['validation'] ) );
 	}
 
 	/**
-	 * Return escaped parsley attributes
-	 * supports: required, required => minlength, required => maxlength
+	 * Check specific validation rule is specified
 	 *
-	 * @param array $attrs
+	 * @param string $rule_name
+	 *
+	 * @return bool|void bool if field contains validation rule name| void if
+	 */
+	public function has_validation_rule( $rule_name = '' ) {
+		return in_array( $rule_name, $this->validation_rules, true );
+	}
+
+	/**
+	 * Return escaped parsley attributes
+	 * supports: required
+	 *
+	 * @param array $attrs  Array of parsley default validation types.
+	 *
+	 * @return string
 	 *
 	 * @todo Support all Parsley default validation types.
 	 */
 	public function validation_attr( $attrs = array() ) {
 
-		if ( ! $this->should_validate_values() ) {
-			return;
+		if ( ! $this->requires_validation() ) {
+			return '';
 		}
 
-		$validation_rules = wp_parse_args( $attrs, $this->args['validation'] );
+		$validation_rules = array_filter( array_unique( wp_parse_args( $attrs, $this->args['validation'] ) ) );
 
 		// Validation rule: Required.
-		if ( isset( $validation_rules['required'] ) ) {
-
+		if ( in_array( 'required', $validation_rules, true ) ) {
 			echo esc_attr( ' required ' );
-
-			if ( is_array( $validation_rules['required'] ) ) {
-
-				array_filter( array_unique( $validation_rules ) );
-
-				foreach ( $validation_rules['required'] as $name => $value ) {
-					echo 'data-parsley-' . esc_attr( $name ) . '="' . esc_attr( $value ) . '"';
-				}
-			}
+			unset( $validation_rules['required'] ); // Remove now for future attributes.
 		}
+
 	}
 
 	/**
