@@ -228,7 +228,7 @@ abstract class CMB_Field {
 		$this->validation_rules = $this->args['validation'];
 
 		add_action( 'post_edit_form_tag', function () {
-			echo esc_attr( ' data-parsley-validate ' );
+			echo esc_attr( ' data-cmb-validate ' );
 		});
 	}
 

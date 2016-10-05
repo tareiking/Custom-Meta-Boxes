@@ -316,7 +316,7 @@ var CMB = {
 
 		var postFormSelector = jQuery('#post');
 
-		if ( typeof postFormSelector.attr('data-parsley-validate') !== 'undefined' ) {
+		if ( typeof postFormSelector.attr('data-cmb-validate') !== 'undefined' ) {
 			postFormSelector.parsley();
 		}
 
