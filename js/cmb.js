@@ -30,6 +30,8 @@ var CMB = {
 		// When toggling the display of the meta box container - reinitialize
 		jQuery(document).on( 'click.CMB', '.postbox h3, .postbox .handlediv', CMB.init );
 
+		CMB.containsValidation();
+
 		CMB.doneInit();
 
 		jQuery('.field.cmb-sortable' ).each( function() {
@@ -303,6 +305,20 @@ var CMB = {
 
 		this._sortEndCallbacks[fieldName] = this._sortEndCallbacks[fieldName] ? this._sortEndCallbacks[fieldName] : []
 		this._sortEndCallbacks[fieldName].push( callback )
+
+	},
+
+	/**
+	 * Checks whether form # contains validation data attributes
+	 * and instantiate validation library (parsley.js).
+	 */
+	containsValidation: function() {
+
+		var postFormSelector = jQuery('#post');
+
+		if ( typeof postFormSelector.attr('data-cmb-validate') !== 'undefined' ) {
+			postFormSelector.parsley();
+		}
 
 	}
 

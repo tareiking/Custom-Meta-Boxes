@@ -10,6 +10,7 @@ abstract class CMB_Field {
 
 	public $value;
 	public $field_index = 0;
+	public $validation_rules;
 
 	public function __construct( $name, $title, array $values, $args = array() ) {
 
@@ -40,6 +41,10 @@ abstract class CMB_Field {
 
 		$this->value = reset( $this->values );
 
+		// If the field has validation.
+		if ( $this->requires_validation() ) {
+			$this->setup_validation();
+		}
 	}
 
 	/**
@@ -67,6 +72,7 @@ abstract class CMB_Field {
 				'save_callback'       => null,
 				'string-repeat-field' => __( 'Add New', 'cmb' ),
 				'string-delete-field' => __( 'Remove', 'cmb' ),
+				'validation'          => array(),
 			),
 			get_class( $this )
 		);
@@ -82,6 +88,9 @@ abstract class CMB_Field {
 		if ( isset( $this->args['sortable'] ) && $this->args['sortable'] )
 			wp_enqueue_script( 'jquery-ui-sortable' );
 
+		if ( $this->requires_validation() ) {
+			wp_enqueue_script( 'parsley-js', trailingslashit( CMB_URL ) . 'js/vendor/parsley/dist/parsley.js', array( 'jquery' ), '2.4.4', true );
+		}
 	}
 
 	/**
@@ -211,6 +220,69 @@ abstract class CMB_Field {
 			echo esc_html( $attr ) . '="' . esc_attr( $attr ) . '"';
 
 	}
+
+	/**
+	 * Used for validation setup tasks
+	 */
+	function setup_validation() {
+		$this->validation_rules = $this->args['validation'];
+
+		add_action( 'post_edit_form_tag', function () {
+			echo esc_attr( ' data-cmb-validate ' );
+		});
+	}
+
+	/**
+	 * Check for validation array key in CMB Field.
+	 *
+	 * @return boolean
+	 */
+	public function requires_validation() {
+		return ( ! empty( $this->args['validation'] ) );
+	}
+
+	/**
+	 * Check specific validation rule is specified
+	 *
+	 * @param string $rule_name
+	 *
+	 * @return bool|void bool if field contains validation rule name| void if
+	 */
+	public function has_validation_rule( $rule_name = '' ) {
+		return in_array( $rule_name, $this->validation_rules, true );
+	}
+
+	/**
+	 * Return escaped parsley attributes
+	 * supports: required
+	 *
+	 * @param array $attrs  Array of parsley default validation types.
+	 *
+	 * @return string
+	 *
+	 * @todo Support all Parsley default validation types.
+	 */
+	public function validation_attr( $attrs = array() ) {
+
+		if ( ! $this->requires_validation() ) {
+			return '';
+		}
+
+		$validation_rules = wp_parse_args( $attrs, $this->args['validation'] );
+
+		foreach ( $validation_rules as $attr => $value ) {
+			if ( 'required' === $attr && $attr ) {
+				echo ' data-parsley-required ';
+			} else {
+				if ( is_bool( $value ) ) {
+					printf( ' data-parsley-type="%s" ', esc_attr( $attr ) );
+				} else {
+					printf( ' data-parsley-%s="%s" ', esc_attr( $attr ), esc_attr( $value ) );
+				}
+			}
+		}
+	}
+
 
 	/**
 	 * Check if this field has a data delegate set
@@ -395,7 +467,7 @@ class CMB_Text_Field extends CMB_Field {
 
 	public function html() { ?>
 
-		<input type="text" <?php $this->id_attr(); ?> <?php $this->boolean_attr(); ?> <?php $this->class_attr(); ?> <?php $this->name_attr(); ?> value="<?php echo esc_attr( $this->get_value() ); ?>" />
+		<input type="text" <?php $this->id_attr(); ?> <?php $this->boolean_attr(); ?> <?php $this->class_attr(); ?> <?php $this->validation_attr(); ?> <?php $this->name_attr(); ?> value="<?php echo esc_attr( $this->get_value() ); ?>" />
 
 	<?php }
 }
