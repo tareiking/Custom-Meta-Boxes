@@ -268,15 +268,21 @@ abstract class CMB_Field {
 			return '';
 		}
 
-		$validation_rules = array_filter( array_unique( wp_parse_args( $attrs, $this->args['validation'] ) ) );
+		$validation_rules = wp_parse_args( $attrs, $this->args['validation'] );
 
-		// Validation rule: Required.
-		if ( in_array( 'required', $validation_rules, true ) ) {
-			echo esc_attr( ' required ' );
-			unset( $validation_rules['required'] ); // Remove now for future attributes.
+		foreach ( $validation_rules as $attr => $value ) {
+			if ( 'required' === $attr && $attr ) {
+				echo ' data-parsley-required ';
+			} else {
+				if ( is_bool( $value ) ) {
+					printf( ' data-parsley-type="%s" ', esc_attr( $attr ) );
+				} else {
+					printf( ' data-parsley-%s="%s" ', esc_attr( $attr ), esc_attr( $value ) );
+				}
+			}
 		}
-
 	}
+
 
 	/**
 	 * Check if this field has a data delegate set
